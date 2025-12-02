@@ -7,6 +7,19 @@
 - Optional: `cron` to schedule automated runs.
 - `mcron` CLI available on `PATH` (or set `MCRON_CMD=/path/to/mcron`). The script uses it to send RCON commands: `save-off`, `save-all`, and `save-on`.
 
+## Set up the RCON helper
+Create a wrapper so non-interactive shells can run `mcron` reliably (and keep the RCON password out of shell aliases):
+```bash
+sudo install -m 0755 bin/mcron.sh /usr/local/bin/mcron
+export MCRON_PASS="your-rcon-password"   # put this in your shell profile or systemd/cron env
+# Optional overrides if your mcrcon binary lives elsewhere:
+# export MCRON_BIN=/opt/mcron/mcrcon/mcrcon
+# export MCRON_HOST=localhost
+# export MCRON_PORT=25575
+```
+For cron, set the env inline:  
+`0 0 * * * MCRON_PASS=... /opt/code/bash/bin/backup-minecraft.sh /opt/minecraft >> /var/log/mc_backup.log 2>&1`
+
 ## Usage
 ```bash
 # Run a one-off backup
