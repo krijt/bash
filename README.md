@@ -5,6 +5,7 @@
 ## Prerequisites
 - Bash 4+, `tar`, and enough disk space for at least five compressed backups.
 - Optional: `cron` to schedule automated runs.
+- `mcron` CLI available on `PATH` (or set `MCRON_CMD=/path/to/mcron`). The script uses it to send RCON commands: `save-off`, `save-all`, and `save-on`.
 
 ## Usage
 ```bash
@@ -14,6 +15,7 @@ bin/backup-minecraft.sh /path/to/minecraft/server
 - Archives are written to `/path/to/minecraft/server/backups/minecraft_backup_YYYYMMDD_HHMMSS.tar.gz`.
 - The `backups/` folder itself is excluded from the archive to avoid recursion.
 - Rotation deletes older archives, keeping the newest five.
+- While backing up, the script: announces start via `say`, disables auto-saves, flushes world data, then re-enables saves after the archive is built (all via `mcron`).
 
 ## Verify a backup
 - List the newest archives: `ls -1t /path/to/minecraft/server/backups | head`

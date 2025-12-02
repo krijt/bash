@@ -2,6 +2,32 @@
 # Back up a running Minecraft server directory, retaining the latest five archives.
 set -euo pipefail
 
+mcron_cmd="${MCRON_CMD:-mcron}"
+saves_disabled=0
+
+mc_rcon() {
+  local rcon_cmd="${1:?}"
+  "${mcron_cmd}" "${rcon_cmd}"
+}
+
+ensure_mcron_available() {
+  if ! command -v "${mcron_cmd}" >/dev/null 2>&1; then
+    echo "Error: required command not found: ${mcron_cmd}" >&2
+    exit 1
+  fi
+}
+
+restore_saves() {
+  if [[ "${saves_disabled}" -eq 1 ]]; then
+    if ! mc_rcon "save-on"; then
+      echo "Warning: failed to re-enable saves via ${mcron_cmd}" >&2
+    fi
+    saves_disabled=0
+  fi
+}
+
+trap restore_saves EXIT
+
 mc_path="${1:-}"
 
 if [[ -z "${mc_path}" ]]; then
@@ -13,6 +39,15 @@ if [[ ! -d "${mc_path}" ]]; then
   echo "Error: path does not exist: ${mc_path}" >&2
   exit 1
 fi
+
+ensure_mcron_available
+
+mc_rcon "say Starting backup; saving world to disk..." || true
+mc_rcon "save-off"
+saves_disabled=1
+mc_rcon "save-all"
+# Allow a short buffer for the save to flush before archiving.
+sleep 2
 
 backups_dir="${mc_path%/}/backups"
 timestamp="$(date +%Y%m%d_%H%M%S)"
@@ -33,6 +68,10 @@ find "${backups_dir}" -maxdepth 1 -type f -name "minecraft_backup_*.tar.gz" \
   | xargs -r rm -f
 
 echo "Backup written to ${backup_file}"
+
+restore_saves
+
+mc_rcon "say Backup completed; saves re-enabled." || true
 
 # Suggested cron entry (runs daily at midnight):
 # 0 0 * * * /path/to/backup-minecraft.sh /opt/minecraft >> /var/log/mc_backup.log 2>&1
