@@ -1,9 +1,26 @@
+# Docker Swarm Redeploy Helper
+
+`bin/swarm/redeploy-services.sh` forces rolling updates for one or more Docker Swarm services.
+
+## Usage
+```bash
+# Redeploy listed services using the local swarm manager
+bin/swarm/redeploy-services.sh api worker frontend
+
+# Or read services from a file (see examples/swarm-services.txt)
+bin/swarm/redeploy-services.sh --file path/to/services.txt --with-auth
+```
+- Requires running on a swarm manager; uses `docker service update --force`.
+- `--file` appends services from a newline-delimited list (blank lines and `#` are ignored).
+- `--with-auth` passes `--with-registry-auth` so registries that need credentials still work.
+- Override the Docker binary path with `DOCKER_CLI=/custom/docker`.
+
 # Minecraft Backup Script
 
-`bin/backup-minecraft.sh` creates timestamped archives of a running Minecraft server directory and rotates them so only the five newest backups are kept.
+`bin/backup-minecraft.sh` creates timestamped archives of a running Minecraft server directory and rotates them so only the newest backups are kept (default retention: 5).
 
 ## Prerequisites
-- Bash 4+, `tar`, and enough disk space for at least five compressed backups.
+- Bash 4+, `tar`, and enough disk space for your desired number of compressed backups (default 5).
 - Optional: `cron` to schedule automated runs.
 - `mcron` CLI available on `PATH` (or set `MCRON_CMD=/path/to/mcron`). The script uses it to send RCON commands: `save-off`, `save-all`, and `save-on`.
 
@@ -22,12 +39,15 @@ For cron, set the env inline:
 
 ## Usage
 ```bash
-# Run a one-off backup
+# Run a one-off backup (keeps 5 by default)
 bin/backup-minecraft.sh /path/to/minecraft/server
+
+# Keep a different number of archives (e.g., 10)
+bin/backup-minecraft.sh /path/to/minecraft/server 10
 ```
 - Archives are written to `/path/to/minecraft/server/backups/minecraft_backup_YYYYMMDD_HHMMSS.tar.gz`.
 - The `backups/` folder itself is excluded from the archive to avoid recursion.
-- Rotation deletes older archives, keeping the newest five.
+- Rotation deletes older archives, keeping the newest `keep_count` (default 5).
 - While backing up, the script: announces start via `say`, disables auto-saves, flushes world data, then re-enables saves after the archive is built (all via `mcron`).
 
 ## Verify a backup
