@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Back up a running Minecraft server directory, retaining the latest five archives.
+# Back up a running Minecraft server directory, retaining a configurable number of archives (default: 5).
 set -euo pipefail
 
 mcron_cmd="${MCRON_CMD:-mcron}"
@@ -29,14 +29,20 @@ restore_saves() {
 trap restore_saves EXIT
 
 mc_path="${1:-}"
+keep_count="${2:-5}"
 
 if [[ -z "${mc_path}" ]]; then
-  echo "Usage: $0 <mc_path>" >&2
+  echo "Usage: $0 <mc_path> [keep_count=5]" >&2
   exit 1
 fi
 
 if [[ ! -d "${mc_path}" ]]; then
   echo "Error: path does not exist: ${mc_path}" >&2
+  exit 1
+fi
+
+if [[ ! "${keep_count}" =~ ^[0-9]+$ || "${keep_count}" -lt 1 ]]; then
+  echo "Error: keep_count must be a positive integer (received: ${keep_count})" >&2
   exit 1
 fi
 
@@ -60,11 +66,11 @@ tar -C "${mc_path}" \
   --exclude "backups" \
   -czf "${backup_file}" .
 
-# Keep only the five newest backups; delete older ones.
+# Keep only the newest backups according to keep_count; delete older ones.
 find "${backups_dir}" -maxdepth 1 -type f -name "minecraft_backup_*.tar.gz" \
   -printf "%T@ %p\n" \
   | sort -nr \
-  | awk 'NR>5 {print $2}' \
+  | awk -v keep="${keep_count}" 'NR>keep {print $2}' \
   | xargs -r rm -f
 
 echo "Backup written to ${backup_file}"
